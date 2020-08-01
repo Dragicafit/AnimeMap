@@ -1,5 +1,4 @@
 import "ol/ol.css";
-import Feature from "ol/Feature";
 import {
   Point,
   LineString,
@@ -28,7 +27,8 @@ parser.inject(
   MultiPoint,
   MultiLineString,
   MultiPolygon,
-  GeometryCollection
+  GeometryCollection,
+  Array
 );
 
 let style = new Style({
@@ -51,6 +51,8 @@ let style = new Style({
   }),
 });
 
+var colors = ["rgba(255,0,0,0.6)", "rgba(255,0,255,0.6)", ""];
+
 var source = new VectorSource();
 fetch(
   "https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_0_countries.geojson"
@@ -71,53 +73,62 @@ fetch(
   });
 function processFeature(feature) {
   let geo = feature.getGeometry();
-
   if (geo.getType() === "MultiPolygon") {
-    let poly2 = new MultiPolygon([[[]]]);
-    geo.getPolygons().forEach((p) => {
-      addPoly(p);
-      poly2.appendPolygon(p);
-    });
-    geo.setCoordinates(poly2.getCoordinates());
-    return;
-  }
-  addPoly(geo);
-
-  /**
-   * @param {Polygon} polygon
-   */
-  function addPoly(polygon) {
-    let extent = polygon.getExtent();
-
-    let lineString = new LineString([
-      olCoordinate.add(olExtent.getTopLeft(extent), [
-        olExtent.getWidth(extent) / 2,
-        0,
-      ]),
-      olCoordinate.add(olExtent.getBottomLeft(extent), [
-        olExtent.getWidth(extent) / 2,
-        0,
-      ]),
-    ]);
-
-    let jstsPolygon = parser.read(polygon);
-    let jstsLineString = parser.read(lineString);
-    try {
-      let polygons = splitPolygon(jstsPolygon, jstsLineString);
-      let newpoly = parser.write(polygons);
-      feature.setGeometry(newpoly);
-    } catch (error) {
-      console.log(error, polygon);
+    var newGeo = [];
+    for (let p of geo.getPolygons()) {
+      try {
+        let polys = addPoly(p);
+        for (let i = 0; i < polys.length; i++) {
+          if (newGeo[i] == null) newGeo[i] = new MultiPolygon([[[]]]);
+          for (let poly of polys[i]) {
+            newGeo[i].appendPolygon(poly);
+          }
+        }
+      } catch (error) {
+        console.log(error, p);
+      }
+    }
+  } else {
+    let polys = addPoly(geo);
+    var newGeo = [];
+    for (let i = 0; i < polys.length; i++) {
+      let multiPoly = new MultiPolygon([[[]]]);
+      for (let poly of polys[i]) {
+        multiPoly.appendPolygon(poly);
+      }
+      newGeo.push(multiPoly);
     }
   }
+  feature.setGeometry(new GeometryCollection(newGeo));
+}
+/**
+ * @param {Polygon} polygon
+ */
+function addPoly(polygon) {
+  let extent = polygon.getExtent();
+  let decalage = olExtent.getWidth(extent) / 3;
+
+  let lineString = new LineString([
+    olCoordinate.add(olExtent.getTopLeft(extent), [decalage, 0]),
+    olCoordinate.add(olExtent.getBottomLeft(extent), [decalage, 0]),
+  ]);
+
+  return splitPolygon(polygon, lineString);
 }
 
 let vectorLayer = new VectorLayer({
   source: source,
   style: function (feature) {
-    feature;
+    let geometries = feature.getGeometry().getGeometries();
     style.getText().setText(feature.get("name"));
-    return [style, style];
+    let styleOut = [];
+    for (let i = 0; i < geometries.length; i++) {
+      let newStyle = style.clone();
+      newStyle.setGeometry(geometries[i]);
+      newStyle.getFill().setColor(colors[i]);
+      styleOut.push(newStyle);
+    }
+    return styleOut;
   },
   visible: true,
 });
@@ -134,44 +145,34 @@ function polygonize(geometry) {
 }
 
 /**
- * @param {jsts.geom.Polygon} poly
- * @param {jsts.geom.LineString} line
- * @returns {jsts.geom.GeometryCollection}
+ * @param {Polygon} polygon
+ * @param {LineString} lineString
+ * @returns {Object}
  */
-function splitPolygon(poly, line) {
-  let nodedLinework = poly.getExteriorRing().union(line);
+function splitPolygon(polygon, lineString) {
+  let jstsPolygon = parser.read(polygon);
+  let jstsLineString = parser.read(lineString);
+  let nodedLinework = jstsPolygon.getExteriorRing().union(jstsLineString);
   let polys = polygonize(nodedLinework);
-  let left = filterInside(polys.slice(polys.length / 2), poly);
-  let rigth = filterInside(polys.slice(polys.length / 2, polys.length), poly);
+  let left = filterInside(polys.slice(0, polys.length / 2), jstsPolygon);
+  let right = filterInside(polys.slice(polys.length / 2), jstsPolygon);
 
-  return poly
-    .getFactory()
-    .createGeometryCollection([
-      poly.getFactory().createMultiPolygon(left),
-      poly.getFactory().createMultiPolygon(rigth),
-    ]);
+  return [left, right];
 }
 
 /**
- * @param {Array} polys
+ * @param {jsts.geom.Polygon[]} polys
  * @param {jsts.geom.Polygon} poly
- * @returns {jsts.geom.Polygon}
+ * @returns {jsts.geom.Polygon[]}
  */
 function filterInside(polys, poly) {
-  return polys.filter((candpoly) => {
-    if (poly.contains(candpoly.getInteriorPoint())) {
-      return true;
-    }
-  });
-}
-
-function directionOfPoint(A, B, P) {
-  let x1 = B.x - A.x;
-  let y1 = B.y - A.y;
-  let x2 = P.x - A.x;
-  let y2 = P.y - A.y;
-
-  return x1 * y2 - y1 * x2 > 0;
+  return polys
+    .filter((candpoly) => {
+      if (poly.contains(candpoly.getInteriorPoint())) {
+        return true;
+      }
+    })
+    .map((poly) => parser.write(poly));
 }
 
 let backgroud = new VectorLayer({
