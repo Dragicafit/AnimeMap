@@ -9,7 +9,7 @@ import {
   MultiPolygon,
   GeometryCollection,
 } from "ol/geom";
-import { Map, View } from "ol";
+import { Map, View, Feature } from "ol";
 import GeoJSON from "ol/format/GeoJSON";
 import { Vector as VectorLayer } from "ol/layer";
 import { Fill, Stroke, Style, Text } from "ol/style";
@@ -52,6 +52,8 @@ let style = new Style({
 });
 
 var colors = ["rgba(255,0,0,0.6)", "rgba(255,0,255,0.6)", "rgba(0,0,255,0.6)"];
+
+var sourceTest = new VectorSource();
 
 var source = new VectorSource();
 fetch(
@@ -203,8 +205,13 @@ let backgroud = new VectorLayer({
   visible: true,
 });
 
+let test = new VectorLayer({
+  source: sourceTest,
+  visible: true,
+});
+
 let map = new Map({
-  layers: [vectorLayer, backgroud],
+  layers: [test, vectorLayer, backgroud],
   target: "map",
   view: new View({
     center: [0, 0],
