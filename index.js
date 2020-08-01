@@ -77,10 +77,10 @@ function processFeature(feature) {
     var newGeo = [];
     for (let p of geo.getPolygons()) {
       try {
-        let polys = addPoly(p);
-        for (let i = 0; i < polys.length; i++) {
+        let multiPolys = addPoly(p);
+        for (let i = 0; i < multiPolys.length; i++) {
           if (newGeo[i] == null) newGeo[i] = new MultiPolygon([[[]]]);
-          for (let poly of polys[i]) {
+          for (let poly of multiPolys[i].getPolygons()) {
             newGeo[i].appendPolygon(poly);
           }
         }
@@ -89,18 +89,11 @@ function processFeature(feature) {
       }
     }
   } else {
-    let polys = addPoly(geo);
-    var newGeo = [];
-    for (let i = 0; i < polys.length; i++) {
-      let multiPoly = new MultiPolygon([[[]]]);
-      for (let poly of polys[i]) {
-        multiPoly.appendPolygon(poly);
-      }
-      newGeo.push(multiPoly);
-    }
+    var newGeo = addPoly(geo);
   }
   feature.setGeometry(new GeometryCollection(newGeo));
 }
+
 /**
  * @param {Polygon} polygon
  */
@@ -113,7 +106,16 @@ function addPoly(polygon) {
     olCoordinate.add(olExtent.getBottomLeft(extent), [decalage, 0]),
   ]);
 
-  return splitPolygon(polygon, lineString);
+  let split = splitPolygon(polygon, lineString);
+  let newGeo = [];
+  for (let polys of split) {
+    let multiPoly = new MultiPolygon([[[]]]);
+    for (let poly of polys) {
+      multiPoly.appendPolygon(poly);
+    }
+    newGeo.push(multiPoly);
+  }
+  return newGeo;
 }
 
 let vectorLayer = new VectorLayer({
