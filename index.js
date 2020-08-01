@@ -51,7 +51,7 @@ let style = new Style({
   }),
 });
 
-var colors = ["rgba(255,0,0,0.6)", "rgba(255,0,255,0.6)", ""];
+var colors = ["rgba(255,0,0,0.6)", "rgba(255,0,255,0.6)", "rgba(0,0,255,0.6)"];
 
 var source = new VectorSource();
 fetch(
@@ -99,14 +99,21 @@ function processFeature(feature) {
  */
 function addPoly(polygon) {
   let extent = polygon.getExtent();
-  let decalage = olExtent.getWidth(extent) / 3;
+  let decalages = [
+    olExtent.getWidth(extent) / 3,
+    olExtent.getWidth(extent) / 1.5,
+  ];
+  let lineStrings = [];
+  for (let decalage of decalages) {
+    lineStrings.push(
+      new LineString([
+        olCoordinate.add(olExtent.getTopLeft(extent), [decalage, 0]),
+        olCoordinate.add(olExtent.getBottomLeft(extent), [decalage, 0]),
+      ])
+    );
+  }
 
-  let lineString = new LineString([
-    olCoordinate.add(olExtent.getTopLeft(extent), [decalage, 0]),
-    olCoordinate.add(olExtent.getBottomLeft(extent), [decalage, 0]),
-  ]);
-
-  let split = splitPolygon(polygon, lineString);
+  let split = splitPolygon(polygon, lineStrings);
   let newGeo = [];
   for (let polys of split) {
     let multiPoly = new MultiPolygon([[[]]]);
@@ -151,15 +158,25 @@ function polygonize(geometry) {
  * @param {LineString} lineString
  * @returns {Object}
  */
-function splitPolygon(polygon, lineString) {
+function splitPolygon(polygon, lineStrings) {
   let jstsPolygon = parser.read(polygon);
-  let jstsLineString = parser.read(lineString);
-  let nodedLinework = jstsPolygon.getExteriorRing().union(jstsLineString);
-  let polys = polygonize(nodedLinework);
-  let left = filterInside(polys.slice(0, polys.length / 2), jstsPolygon);
-  let right = filterInside(polys.slice(polys.length / 2), jstsPolygon);
+  let nodedLinework = jstsPolygon.getExteriorRing();
+  for (let lineString of lineStrings)
+    nodedLinework = nodedLinework.union(parser.read(lineString));
 
-  return [left, right];
+  let polys = polygonize(nodedLinework);
+
+  let outPut = [];
+  for (let i = 0; i < lineStrings.length + 1; i++) {
+    outPut.push(
+      filterInside(
+        polys.slice((i * polys.length) / 3, ((i + 1) * polys.length) / 3),
+        jstsPolygon
+      )
+    );
+  }
+
+  return outPut;
 }
 
 /**
