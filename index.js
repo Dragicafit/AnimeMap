@@ -17,6 +17,9 @@ import VectorSource from "ol/source/Vector";
 import * as olExtent from "ol/extent";
 import * as olCoordinate from "ol/coordinate";
 import * as jsts from "jsts";
+import io from "socket.io-client";
+
+let socket = io.connect("http://127.0.0.1:4000/");
 
 let parser = new jsts.io.OL3Parser();
 parser.inject(
@@ -51,35 +54,53 @@ let style = new Style({
   }),
 });
 
-var colors = ["rgba(255,0,0,0.6)", "rgba(255,0,255,0.6)", "rgba(0,0,255,0.6)"];
+var colors = [
+  "rgba(255,0,0,1)",
+  "rgba(0,255,0,1)",
+  "rgba(0,0,255,1)",
+  "rgba(255,255,0,1)",
+  "rgba(255,0,255,1)",
+  "rgba(0,255,255,1)",
+  "rgba(255,255,255,1)",
+];
 
 var sourceTest = new VectorSource();
 
 var source = new VectorSource();
-fetch(
-  "https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_0_countries.geojson"
-)
-  .then(function (response) {
-    return response.json();
-  })
-  .then(function (json) {
-    var format = new GeoJSON();
-    var features = format.readFeatures(json, {
-      featureProjection: "EPSG:3857",
-    });
 
-    for (let feature of features) {
-      processFeature(feature);
-    }
-    source.addFeatures(features);
-  });
-function processFeature(feature) {
+socket.emit("request", (data) => {
+  if (data == null) return;
+  fetch(
+    "https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_0_countries.geojson"
+  )
+    .then(function (response) {
+      return response.json();
+    })
+    .then(function (json) {
+      var format = new GeoJSON();
+      var features = format.readFeatures(json, {
+        featureProjection: "EPSG:3857",
+      });
+
+      source.clear();
+      for (let feature of features) {
+        processFeature(feature, data.locations);
+      }
+    });
+});
+
+function processFeature(feature, locations) {
+  let data = locations[feature.values_.iso_a2];
+  if (data == null || feature.values_.iso_a2 != "IT") return;
+
   let geo = feature.getGeometry();
   if (geo.getType() === "MultiPolygon") {
     var newGeo = [];
     for (let p of geo.getPolygons()) {
       try {
-        let multiPolys = addPoly(p);
+        let multiPolys = addPoly(p, [
+          data / Math.max(...Object.values(locations)),
+        ]);
         for (let i = 0; i < multiPolys.length; i++) {
           if (newGeo[i] == null) newGeo[i] = new MultiPolygon([[[]]]);
           for (let poly of multiPolys[i].getPolygons()) {
@@ -87,30 +108,41 @@ function processFeature(feature) {
           }
         }
       } catch (error) {
-        console.log(error, p);
+        console.error(error, p);
       }
     }
   } else {
-    var newGeo = addPoly(geo);
+    var newGeo = addPoly(geo, [data / Math.max(...Object.values(locations))]);
   }
   feature.setGeometry(new GeometryCollection(newGeo));
+  source.addFeature(feature);
 }
 
 /**
  * @param {Polygon} polygon
+ * @param {Polygon} polygon
  */
-function addPoly(polygon) {
+function addPoly(polygon, decalages) {
   let extent = polygon.getExtent();
-  let decalages = [
-    olExtent.getWidth(extent) / 3,
-    olExtent.getWidth(extent) / 1.5,
+  let origin = [
+    0,
+    Math.sqrt(
+      (olExtent.getTopRight(extent)[0] - olExtent.getCenter(extent)[0]) ** 2 +
+        (olExtent.getTopRight(extent)[1] - olExtent.getCenter(extent)[1]) ** 2
+    ) * 1.1,
   ];
-  let lineStrings = [];
+  let lineStrings = [
+    new LineString([
+      olExtent.getCenter(extent),
+      olCoordinate.add(origin.slice(), olExtent.getCenter(extent)),
+    ]),
+  ];
   for (let decalage of decalages) {
+    olCoordinate.rotate(origin, 0.01 * Math.PI * 2);
     lineStrings.push(
       new LineString([
-        olCoordinate.add(olExtent.getTopLeft(extent), [decalage, 0]),
-        olCoordinate.add(olExtent.getBottomLeft(extent), [decalage, 0]),
+        olExtent.getCenter(extent),
+        olCoordinate.add(origin.slice(), olExtent.getCenter(extent)),
       ])
     );
   }
@@ -166,19 +198,38 @@ function splitPolygon(polygon, lineStrings) {
   for (let lineString of lineStrings)
     nodedLinework = nodedLinework.union(parser.read(lineString));
 
-  let polys = polygonize(nodedLinework);
-
-  let outPut = [];
-  for (let i = 0; i < lineStrings.length + 1; i++) {
-    outPut.push(
-      filterInside(
-        polys.slice((i * polys.length) / 3, ((i + 1) * polys.length) / 3),
-        jstsPolygon
-      )
-    );
+  let polys = filterInside(polygonize(nodedLinework), jstsPolygon);
+  let mode = null;
+  for (const key in polys) {
+    const poly = polys[key];
+    if (poly.filtered === true) {
+      mode = key;
+      break;
+    }
   }
 
-  return outPut;
+  let outPut = [];
+  for (let i = 0; i < lineStrings.length; i++) {
+    let subPolys = polys.slice();
+    if (mode === 1) {
+      if (i === 0) subPolys = [subPolys[0], subPolys[1]];
+      if (i === 1) subPolys = [subPolys[2], subPolys[3]];
+    }
+    if (mode === 2) {
+      if (i === 0) subPolys = [subPolys[0], subPolys[3]];
+      if (i === 1) subPolys = [subPolys[1], subPolys[2]];
+    }
+    if (mode === 3) {
+      if (i === 0) subPolys = [subPolys[0], subPolys[2]];
+      if (i === 1) subPolys = [subPolys[1], subPolys[3]];
+    }
+    outPut.push(
+      subPolys
+        .filter((poly) => poly.filtered !== true)
+        .map((poly) => parser.write(poly))
+    );
+  }
+  return polys.map((poly) => [parser.write(poly)]);
 }
 
 /**
@@ -187,13 +238,12 @@ function splitPolygon(polygon, lineStrings) {
  * @returns {jsts.geom.Polygon[]}
  */
 function filterInside(polys, poly) {
-  return polys
-    .filter((candpoly) => {
-      if (poly.contains(candpoly.getInteriorPoint())) {
-        return true;
-      }
-    })
-    .map((poly) => parser.write(poly));
+  return polys.map((candpoly) => {
+    if (!poly.contains(candpoly.getInteriorPoint())) {
+      candpoly["filtered"] = true;
+    }
+    return candpoly;
+  });
 }
 
 let backgroud = new VectorLayer({

@@ -5,12 +5,28 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "server",
+      "request": "launch",
+      "runtimeArgs": ["run-script", "server"],
+      "runtimeExecutable": "npm",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "pwa-node"
+    },
+    {
       "type": "firefox",
       "request": "launch",
       "reAttach": true,
       "name": "Launch localhost",
       "url": "http://localhost:1234",
       "webRoot": "${workspaceFolder}"
+    },
+    {
+      "name": "parcel",
+      "request": "launch",
+      "runtimeArgs": ["start"],
+      "runtimeExecutable": "npm",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "pwa-node"
     }
   ]
 }
