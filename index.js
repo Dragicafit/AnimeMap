@@ -35,28 +35,16 @@ parser.inject(
 );
 
 let style = new Style({
-  fill: new Fill({
-    color: "rgba(255, 0, 255, 0.6)",
-  }),
+  fill: new Fill(),
   stroke: new Stroke({
-    color: "#319FD3",
+    color: "rgba(255, 0, 255, 0.6)",
     width: 1,
-  }),
-  text: new Text({
-    font: "12px Calibri,sans-serif",
-    fill: new Fill({
-      color: "#000",
-    }),
-    stroke: new Stroke({
-      color: "#fff",
-      width: 3,
-    }),
   }),
 });
 
 var colors = [
-  "rgba(255,0,0,1)",
-  "rgba(0,255,0,1)",
+  "rgba(255,127,0,1)",
+  "rgba(50,50,50,1)",
   "rgba(0,0,255,1)",
   "rgba(255,255,0,1)",
   "rgba(255,0,255,1)",
@@ -91,7 +79,7 @@ socket.emit("request", (data) => {
 
 function processFeature(feature, locations) {
   let data = locations[feature.values_.iso_a2];
-  if (data == null || feature.values_.iso_a2 != "IT") return;
+  if (data == null || feature.values_.iso_a2 == "I T") return;
 
   let geo = feature.getGeometry();
   if (geo.getType() === "MultiPolygon") {
@@ -124,6 +112,7 @@ function processFeature(feature, locations) {
  */
 function addPoly(polygon, decalages) {
   let extent = polygon.getExtent();
+  let center = polygon.getInteriorPoint().getCoordinates();
   let origin = [
     0,
     Math.sqrt(
@@ -132,29 +121,32 @@ function addPoly(polygon, decalages) {
     ) * 1.1,
   ];
   let lineStrings = [
-    new LineString([
-      olExtent.getCenter(extent),
-      olCoordinate.add(origin.slice(), olExtent.getCenter(extent)),
-    ]),
+    new LineString([center, olCoordinate.add(origin.slice(), center)]),
   ];
   for (let decalage of decalages) {
-    olCoordinate.rotate(origin, 0.01 * Math.PI * 2);
+    let rotation = olCoordinate.rotate(origin.slice(), -decalage * Math.PI * 2);
     lineStrings.push(
-      new LineString([
-        olExtent.getCenter(extent),
-        olCoordinate.add(origin.slice(), olExtent.getCenter(extent)),
-      ])
+      new LineString([center, olCoordinate.add(rotation, center)])
     );
   }
-
   let split = splitPolygon(polygon, lineStrings);
+
   let newGeo = [];
-  for (let polys of split) {
-    let multiPoly = new MultiPolygon([[[]]]);
-    for (let poly of polys) {
-      multiPoly.appendPolygon(poly);
+  for (let i = 0; i < decalages.length + 1; i++) {
+    newGeo.push(new MultiPolygon([[[]]]));
+  }
+  for (const poly of split) {
+    let center2 = poly.getInteriorPoint().getCoordinates();
+    let angle = Math.atan2(center2[0] - center[0], center2[1] - center[1]);
+    if (angle < 0) {
+      angle += 2 * Math.PI;
     }
-    newGeo.push(multiPoly);
+    for (let i = 0; i < decalages.length + 1; i++) {
+      if (i == decalages.length || angle < decalages[i] * Math.PI * 2) {
+        newGeo[i].appendPolygon(poly);
+        break;
+      }
+    }
   }
   return newGeo;
 }
@@ -163,7 +155,6 @@ let vectorLayer = new VectorLayer({
   source: source,
   style: function (feature) {
     let geometries = feature.getGeometry().getGeometries();
-    style.getText().setText(feature.get("name"));
     let styleOut = [];
     for (let i = 0; i < geometries.length; i++) {
       let newStyle = style.clone();
@@ -198,38 +189,10 @@ function splitPolygon(polygon, lineStrings) {
   for (let lineString of lineStrings)
     nodedLinework = nodedLinework.union(parser.read(lineString));
 
-  let polys = filterInside(polygonize(nodedLinework), jstsPolygon);
-  let mode = null;
-  for (const key in polys) {
-    const poly = polys[key];
-    if (poly.filtered === true) {
-      mode = key;
-      break;
-    }
-  }
-
-  let outPut = [];
-  for (let i = 0; i < lineStrings.length; i++) {
-    let subPolys = polys.slice();
-    if (mode === 1) {
-      if (i === 0) subPolys = [subPolys[0], subPolys[1]];
-      if (i === 1) subPolys = [subPolys[2], subPolys[3]];
-    }
-    if (mode === 2) {
-      if (i === 0) subPolys = [subPolys[0], subPolys[3]];
-      if (i === 1) subPolys = [subPolys[1], subPolys[2]];
-    }
-    if (mode === 3) {
-      if (i === 0) subPolys = [subPolys[0], subPolys[2]];
-      if (i === 1) subPolys = [subPolys[1], subPolys[3]];
-    }
-    outPut.push(
-      subPolys
-        .filter((poly) => poly.filtered !== true)
-        .map((poly) => parser.write(poly))
-    );
-  }
-  return polys.map((poly) => [parser.write(poly)]);
+  let polys = filterInside(polygonize(nodedLinework), jstsPolygon).map((poly) =>
+    parser.write(poly)
+  );
+  return polys;
 }
 
 /**
@@ -238,11 +201,8 @@ function splitPolygon(polygon, lineStrings) {
  * @returns {jsts.geom.Polygon[]}
  */
 function filterInside(polys, poly) {
-  return polys.map((candpoly) => {
-    if (!poly.contains(candpoly.getInteriorPoint())) {
-      candpoly["filtered"] = true;
-    }
-    return candpoly;
+  return polys.filter((candpoly) => {
+    return poly.contains(candpoly.getInteriorPoint());
   });
 }
 
@@ -261,7 +221,7 @@ let test = new VectorLayer({
 });
 
 let map = new Map({
-  layers: [test, vectorLayer, backgroud],
+  layers: [backgroud, vectorLayer, test],
   target: "map",
   view: new View({
     center: [0, 0],
