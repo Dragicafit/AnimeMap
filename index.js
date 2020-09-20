@@ -19,7 +19,7 @@ import * as olCoordinate from "ol/coordinate";
 import * as jsts from "jsts";
 import io from "socket.io-client";
 
-let socket = io.connect("http://127.0.0.1:4000/");
+let socket = io.connect("http://127.0.0.1:5000/");
 
 let parser = new jsts.io.OL3Parser();
 parser.inject(
@@ -81,14 +81,13 @@ function processFeature(feature, locations) {
   let data = locations[feature.values_.iso_a2];
   if (data == null || feature.values_.iso_a2 == "I T") return;
 
+  let max = Math.max(...Object.values(locations));
   let geo = feature.getGeometry();
   if (geo.getType() === "MultiPolygon") {
     var newGeo = [];
     for (let p of geo.getPolygons()) {
       try {
-        let multiPolys = addPoly(p, [
-          data / Math.max(...Object.values(locations)),
-        ]);
+        let multiPolys = addPoly(p, [data / max]);
         for (let i = 0; i < multiPolys.length; i++) {
           if (newGeo[i] == null) newGeo[i] = new MultiPolygon([[[]]]);
           for (let poly of multiPolys[i].getPolygons()) {
@@ -100,7 +99,7 @@ function processFeature(feature, locations) {
       }
     }
   } else {
-    var newGeo = addPoly(geo, [data / Math.max(...Object.values(locations))]);
+    var newGeo = addPoly(geo, [data / max]);
   }
   feature.setGeometry(new GeometryCollection(newGeo));
   source.addFeature(feature);

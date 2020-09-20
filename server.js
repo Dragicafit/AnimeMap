@@ -4,7 +4,7 @@
 const io = require("socket.io")();
 const performance = require("perf_hooks").performance;
 const mysql = require("mysql");
-const port = process.env.PORT || 4000;
+const port = process.env.PORT || 5000;
 
 process.title = "AnimeMap";
 
