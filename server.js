@@ -22,7 +22,8 @@ io.origins("*:*");
 io.on("connection", (socket) => {
   socket.on("request", (callback) => {
     console.log("request");
-    let sql = "SELECT Location, count(*) AS Nb FROM series GROUP BY Location";
+    let sql =
+      "SELECT Location, count(*) AS Nb FROM collections GROUP BY Location";
     con.query(sql, function (err, result) {
       if (err) return console.error(err);
       if (result.length == 0) {

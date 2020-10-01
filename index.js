@@ -17,7 +17,18 @@ import VectorSource from "ol/source/Vector";
 import * as olExtent from "ol/extent";
 import * as olCoordinate from "ol/coordinate";
 import * as jsts from "jsts";
+import colormap from "colormap";
 import io from "socket.io-client";
+
+const ramp = colormap({
+  colormap: "oxygen",
+  nshades: 20,
+}).reverse();
+
+function getColor(decalage, i) {
+  if (typeof colors[i] === "string") return colors[i];
+  return colors[i][Math.floor((colors[i].length * (decalage - 1)) / 100)];
+}
 
 let socket = io.connect("http://127.0.0.1:5000/");
 
@@ -34,17 +45,40 @@ parser.inject(
   Array
 );
 
-let style = new Style({
+let styleCamembert = new Style({
+  fill: new Fill(),
+});
+
+let styleCountry = new Style({
   fill: new Fill(),
   stroke: new Stroke({
-    color: "rgba(255, 0, 255, 0.6)",
-    width: 1,
+    color: "rgba(255, 0, 255, 1)",
+    width: 6,
+  }),
+  text: new Text({
+    offsetY: 15,
+    font: "12px Calibri,sans-serif",
+    fill: new Fill({
+      color: "#fff",
+    }),
+    stroke: new Stroke({
+      color: "#000",
+      width: 1,
+    }),
+    overflow: true,
   }),
 });
 
 var colors = [
-  "rgba(255,127,0,1)",
+  ramp,
   "rgba(50,50,50,1)",
+  [
+    "rgba(255,255,255,1)",
+    "rgba(255,223,191,1)",
+    "rgba(255,191,127,1)",
+    "rgba(255,159,64,1)",
+    "rgba(255,127,0,1)",
+  ],
   "rgba(0,0,255,1)",
   "rgba(255,255,0,1)",
   "rgba(255,0,255,1)",
@@ -82,7 +116,7 @@ function processFeature(feature, locations) {
   if (data == null || feature.values_.iso_a2 == "I T") return;
 
   let max = Math.max(...Object.values(locations));
-  let geo = feature.getGeometry();
+  let geo = feature.getGeometry(); /*
   if (geo.getType() === "MultiPolygon") {
     var newGeo = [];
     for (let p of geo.getPolygons()) {
@@ -100,8 +134,9 @@ function processFeature(feature, locations) {
     }
   } else {
     var newGeo = addPoly(geo, [data / max]);
-  }
-  feature.setGeometry(new GeometryCollection(newGeo));
+  }*/
+  feature.setGeometry(/*new GeometryCollection([...newGeo,*/ geo /*])*/);
+  feature.set("decalage", Math.round((100 * data) / max));
   source.addFeature(feature);
 }
 
@@ -153,14 +188,26 @@ function addPoly(polygon, decalages) {
 let vectorLayer = new VectorLayer({
   source: source,
   style: function (feature) {
-    let geometries = feature.getGeometry().getGeometries();
-    let styleOut = [];
-    for (let i = 0; i < geometries.length; i++) {
-      let newStyle = style.clone();
+    /*
+    let geometries = feature.getGeometry().getGeometries();*/
+    let decalage = feature.get("decalage");
+    let styleOut = []; /*
+    for (let i = 0; i < geometries.length - 1; i++) {
+      let newStyle = styleCamembert.clone();
       newStyle.setGeometry(geometries[i]);
-      newStyle.getFill().setColor(colors[i]);
+      newStyle.getFill().setColor(getColor(decalage, i));
       styleOut.push(newStyle);
-    }
+    }*/
+    let newStyle = styleCountry.clone();
+    newStyle.setGeometry(
+      feature.getGeometry() /*geometries[geometries.length - 1]*/
+    );
+    newStyle.getFill().setColor(getColor(decalage, 0));
+    newStyle.getText().setText(`${decalage}%`);
+    var zoom = Math.round(0.2 * map.getView().getZoom() ** 3);
+    var size = `${zoom}px Calibri,sans-serif`;
+    newStyle.getText().setFont(size);
+    styleOut.push(newStyle);
     return styleOut;
   },
   visible: true,
