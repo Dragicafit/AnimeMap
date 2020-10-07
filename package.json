@@ -12,12 +12,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "chart.js": "^2.9.3",
+    "chartjs-plugin-datalabels": "^0.7.0",
     "colormap": "^2.3.1",
-    "jsts": "^2.5.0",
+    "jsts": "^2.5.1",
     "mysql": "^2.18.1",
-    "ol": "^6.3.1",
+    "ol": "^6.4.3",
     "socket.io": "^2.3.0",
-    "socket.io-client": "^2.3.0"
+    "socket.io-client": "^2.3.1"
   },
   "devDependencies": {
     "parcel-bundler": "^1.12.4"
