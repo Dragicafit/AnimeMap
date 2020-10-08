@@ -23,8 +23,8 @@ io.on("connection", (socket) => {
   socket.on("request", (callback) => {
     console.log("request");
     let sql =
-      'SELECT Location, COUNT(*) AS Nb FROM collections c1 WHERE DATEDIFF((SELECT MAX(Date) FROM collections c2 where c2.Location = c1.Location), Date) < 30 GROUP BY Location UNION\
-       SELECT "Total" AS Location, COUNT(DISTINCT Id) AS Nb FROM collections c1 WHERE DATEDIFF((SELECT MAX(Date) FROM collections c2 where c2.Location = c1.Location), Date) < 30 ORDER BY Nb DESC';
+      'SELECT Location, COUNT(*) AS Nb FROM series s1 WHERE DATEDIFF((SELECT MAX(Date) FROM series s2 where s2.Location = s1.Location), Date) < 30 GROUP BY Location UNION\
+       SELECT "Total" AS Location, COUNT(DISTINCT Id) AS Nb FROM series s1 WHERE DATEDIFF((SELECT MAX(Date) FROM series s2 where s2.Location = s1.Location), Date) < 30 ORDER BY Nb DESC';
     con.query(sql, function (err, result) {
       if (err) return console.error(err);
       if (result.length == 0) {
