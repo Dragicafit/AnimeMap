@@ -28,12 +28,8 @@ const ramp = colormap({
 
 function getColor(decalage, i) {
   if (typeof colors[i] === "string") return colors[i];
-  return colors[i][
-    Math.min(
-      Math.max(Math.floor((colors[i].length * decalage) / 100), 0),
-      colors[i].length - 1
-    )
-  ];
+  let color = Math.floor((colors[i].length * decalage) / 100);
+  return colors[i][Math.min(Math.max(color, 0), colors[i].length - 1)];
 }
 
 let countryColors = {};
