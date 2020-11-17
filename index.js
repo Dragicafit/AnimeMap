@@ -81,7 +81,7 @@ let styleCamembert = new Style({
 let styleCountry = new Style({
   fill: new Fill(),
   stroke: new Stroke({
-    color: "rgba(255, 0, 255, 1)",
+    color: "rgba(0, 200, 200, 1)",
     width: 0.5,
   }),
   text: new Text({
@@ -347,7 +347,7 @@ let vectorLayer = new VectorLayer({
     newStyle
       .getText()
       .setText(`${countryColors[feature.values_.iso_a2].decalage}%`);
-    var zoom = map.getView().getZoom() ** 3 * 0.4;
+    var zoom = map.getView().getZoom() ** 3 * 0.5;
     var size = `${zoom}px Calibri,sans-serif`;
     newStyle.getText().setFont(size);
     styleOut.push(newStyle);
@@ -421,7 +421,7 @@ let map = new Map({
   layers: [backgroud, vectorLayer /*, test*/],
   target: "map",
   view: new View({
-    center: [1280000, 4000000],
+    center: [0, 4000000],
     zoom: 1,
   }),
   pixelRatio: ratio,
