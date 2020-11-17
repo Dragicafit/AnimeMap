@@ -1,3 +1,5 @@
+"use strict";
+
 import "ol/ol.css";
 import {
   Point,
@@ -23,6 +25,8 @@ Chart.plugins.unregister(ChartDataLabels);
 
 let ratio = 10;
 let nshades = 10;
+let mapUrl =
+  "https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_0_countries.geojson";
 
 const ramp = colormap({
   colormap: "autumn",
@@ -164,9 +168,7 @@ socket.emit("request", (data) => {
       },
     },
   });
-  fetch(
-    "https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_0_countries.geojson"
-  )
+  fetch(mapUrl)
     .then(function (response) {
       return response.json();
     })
@@ -395,8 +397,7 @@ function filterInside(polys, poly) {
 
 let backgroud = new VectorLayer({
   source: new VectorSource({
-    url:
-      "https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_0_countries.geojson",
+    url: mapUrl,
     format: new GeoJSON(),
   }),
   visible: true,

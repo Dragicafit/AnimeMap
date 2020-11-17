@@ -1,19 +1,26 @@
 #!/usr/bin/env node
 "use strict";
 
+require("dotenv").config();
+
 const io = require("socket.io")();
 const performance = require("perf_hooks").performance;
 const mysql = require("mysql");
 const port = process.env.PORT || 5000;
 
+const MYSLQ_HOST = process.env.MYSLQ_HOST;
+const MYSLQ_USER = process.env.MYSLQ_USER;
+const MYSLQ_PASSWORD = process.env.MYSLQ_PASSWORD;
+const MYSLQ_DATABASE = process.env.MYSLQ_DATABASE;
+
 process.title = "AnimeMap";
 
 let con = mysql.createPool({
   connectionLimit: 10,
-  host: "localhost",
-  user: "programme",
-  password: "9JZojvKKQ9tEkeqk",
-  database: "crunchy_data",
+  host: MYSLQ_HOST,
+  user: MYSLQ_USER,
+  password: MYSLQ_PASSWORD,
+  database: MYSLQ_DATABASE,
 });
 
 io.listen(port);

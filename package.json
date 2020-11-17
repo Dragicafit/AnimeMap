@@ -15,6 +15,7 @@
     "chart.js": "^2.9.4",
     "chartjs-plugin-datalabels": "^0.7.0",
     "colormap": "^2.3.1",
+    "dotenv": "^8.2.0",
     "jsts": "^2.6.1",
     "mysql": "^2.18.1",
     "ol": "^6.4.3",
