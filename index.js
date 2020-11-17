@@ -38,18 +38,6 @@ let styleCountry = new Style({
     color: "rgba(0, 200, 200, 1)",
     width: 0.5,
   }),
-  text: new Text({
-    offsetY: 2,
-    font: "12px Calibri,sans-serif",
-    fill: new Fill({
-      color: "#fff",
-    }),
-    stroke: new Stroke({
-      color: "#000",
-      width: 0.1,
-    }),
-    overflow: true,
-  }),
 });
 
 var source = new VectorSource();
@@ -220,12 +208,6 @@ let vectorLayer = new VectorLayer({
     let newStyle = styleCountry.clone();
     newStyle.setGeometry(feature.getGeometry());
     newStyle.getFill().setColor(countryColors[feature.values_.iso_a2].color);
-    newStyle
-      .getText()
-      .setText(`${countryColors[feature.values_.iso_a2].decalage}%`);
-    var zoom = map.getView().getZoom() ** 3 * 0.5;
-    var size = `${zoom}px Calibri,sans-serif`;
-    newStyle.getText().setFont(size);
     styleOut.push(newStyle);
     return styleOut;
   },
