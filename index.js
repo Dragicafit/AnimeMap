@@ -140,7 +140,10 @@ socket.emit("request", (data) => {
             },
             ticks: {
               callback: function (value, index, values) {
-                if (0 == index % Math.floor((values.length * 2) / nshades)) {
+                if (
+                  0 == index % Math.floor((values.length * 2) / nshades) ||
+                  index == values.length - 1
+                ) {
                   return value;
                 }
               },
