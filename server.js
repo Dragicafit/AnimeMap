@@ -7,19 +7,14 @@ const io = require("socket.io")();
 const mysql = require("mysql");
 const port = process.env.PORT || 5000;
 
-const MYSLQ_HOST = process.env.MYSLQ_HOST;
-const MYSLQ_USER = process.env.MYSLQ_USER;
-const MYSLQ_PASSWORD = process.env.MYSLQ_PASSWORD;
-const MYSLQ_DATABASE = process.env.MYSLQ_DATABASE;
-
 process.title = "AnimeMap";
 
 let con = mysql.createPool({
   connectionLimit: 10,
-  host: MYSLQ_HOST,
-  user: MYSLQ_USER,
-  password: MYSLQ_PASSWORD,
-  database: MYSLQ_DATABASE,
+  host: process.env.MYSLQ_HOST,
+  user: process.env.MYSLQ_USER,
+  password: process.env.MYSLQ_PASSWORD,
+  database: process.env.MYSLQ_DATABASE,
 });
 
 io.listen(port);
