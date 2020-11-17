@@ -46,9 +46,9 @@ socket.emit("request", (data) => {
   if (data == null) return;
 
   let lengend = {};
-  for (let i = 0; i <= data.locations.Total; i++) {
+  for (let i = 0; i <= 1100; i++) {
     lengend[i] = {
-      color: getColor(Math.round((100 * i) / data.locations.Total)),
+      color: getColor(Math.round((100 * i) / 1100)),
       data: 1,
     };
   }
