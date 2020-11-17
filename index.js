@@ -19,12 +19,33 @@ import colormap from "colormap";
 import io from "socket.io-client";
 import Chart from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
+Chart.plugins.unregister(ChartDataLabels);
+
+let ratio = 10;
+let nshades = 10;
 
 const ramp = colormap({
   colormap: "autumn",
-  nshades: 20,
+  nshades: nshades,
   format: "rgbaString",
 }).reverse();
+
+var colors = [
+  ramp,
+  "rgba(50,50,50,1)",
+  [
+    "rgba(255,255,255,1)",
+    "rgba(255,223,191,1)",
+    "rgba(255,191,127,1)",
+    "rgba(255,159,64,1)",
+    "rgba(255,127,0,1)",
+  ],
+  "rgba(0,0,255,1)",
+  "rgba(255,255,0,1)",
+  "rgba(255,0,255,1)",
+  "rgba(0,255,255,1)",
+  "rgba(255,255,255,1)",
+];
 
 function getColor(decalage, i) {
   if (typeof colors[i] === "string") return colors[i];
@@ -73,31 +94,76 @@ let styleCountry = new Style({
   }),
 });
 
-var colors = [
-  ramp,
-  "rgba(50,50,50,1)",
-  [
-    "rgba(255,255,255,1)",
-    "rgba(255,223,191,1)",
-    "rgba(255,191,127,1)",
-    "rgba(255,159,64,1)",
-    "rgba(255,127,0,1)",
-  ],
-  "rgba(0,0,255,1)",
-  "rgba(255,255,0,1)",
-  "rgba(255,0,255,1)",
-  "rgba(0,255,255,1)",
-  "rgba(255,255,255,1)",
-];
-
-console.log(getColor(5, 0));
-
 var sourceTest = new VectorSource();
 
 var source = new VectorSource();
 
 socket.emit("request", (data) => {
   if (data == null) return;
+
+  let lengend = {};
+  for (let i = 0; i <= data.locations.Total; i++) {
+    lengend[i] = {
+      color: getColor(Math.round((100 * i) / data.locations.Total), 0),
+      data: 1,
+    };
+  }
+  new Chart("myLegend", {
+    type: "horizontalBar",
+    data: {
+      labels: Object.keys(lengend),
+      datasets: [
+        {
+          barThickness: 1,
+          data: Object.values(lengend).map((value) => value?.data),
+          backgroundColor: Object.values(lengend).map((value) => value?.color),
+        },
+      ],
+    },
+    options: {
+      devicePixelRatio: ratio,
+      maintainAspectRatio: false,
+      legend: {
+        display: false,
+      },
+      scales: {
+        yAxes: [
+          {
+            position: "right",
+            gridLines: {
+              drawBorder: false,
+              display: false,
+            },
+            ticks: {
+              callback: function (value, index, values) {
+                if (0 == index % Math.floor((values.length * 2) / nshades)) {
+                  return value;
+                }
+              },
+              maxRotation: 0,
+              minRotation: 0,
+              beginAtZero: true,
+              autoSkip: false,
+            },
+          },
+        ],
+        xAxes: [
+          {
+            display: false,
+            ticks: {
+              max: 1,
+              min: 0,
+            },
+          },
+        ],
+      },
+      layout: {
+        padding: {
+          right: 15,
+        },
+      },
+    },
+  });
   fetch(
     "https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_0_countries.geojson"
   )
@@ -138,12 +204,16 @@ socket.emit("request", (data) => {
           ],
         },
         options: {
-          devicePixelRatio: 6,
+          devicePixelRatio: ratio,
           maintainAspectRatio: false,
           scales: {
             xAxes: [
               {
                 ticks: { beginAtZero: true },
+                scaleLabel: {
+                  display: true,
+                  labelString: "number of anime",
+                },
               },
             ],
             yAxes: [
@@ -332,7 +402,7 @@ let backgroud = new VectorLayer({
   visible: true,
   style: new Style({
     fill: new Fill({
-      color: "rgba(255,255,255,0.4)",
+      color: "rgba(200,200,200,1)",
     }),
     stroke: new Stroke({
       color: "#3399CC",
@@ -347,13 +417,13 @@ let test = new VectorLayer({
 });
 
 let map = new Map({
-  layers: [backgroud, vectorLayer, test],
+  layers: [backgroud, vectorLayer /*, test*/],
   target: "map",
   view: new View({
-    center: [1280000, 2000000],
+    center: [1280000, 4000000],
     zoom: 1,
   }),
-  pixelRatio: 6,
+  pixelRatio: ratio,
 });
 /*
 let highlightStyle = new Style({

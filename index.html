@@ -5,6 +5,7 @@
     <title>Using Parcel with OpenLayers</title>
     <style>
       body {
+        position: relative;
         margin: 0px;
         width: 1280px;
         height: 720px;
@@ -21,6 +22,13 @@
         width: 25%;
         height: 100%;
       }
+      #legend {
+        position: absolute;
+        width: 5%;
+        height: 30%;
+        left: 10%;
+        top: 70%;
+      }
     </style>
   </head>
   <body>
@@ -28,7 +36,9 @@
     <div id="chart">
       <canvas id="myChart"></canvas>
     </div>
-    <div id="info">&nbsp;</div>
+    <div id="legend">
+      <canvas id="myLegend"></canvas>
+    </div>
     <script src="./index.js"></script>
   </body>
 </html>
