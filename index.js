@@ -12,7 +12,7 @@ import Chart from "chart.js";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 Chart.plugins.unregister(ChartDataLabels);
 
-const ratio = 10;
+const ratio = 5;
 const nshades = 10;
 const mapUrl =
   "https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_0_countries.geojson";
