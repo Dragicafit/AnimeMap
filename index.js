@@ -157,7 +157,7 @@ socket.emit("request", (data) => {
                 ticks: { beginAtZero: true },
                 scaleLabel: {
                   display: true,
-                  labelString: "number of anime",
+                  labelString: "number of anime available on Crunchyroll",
                 },
               },
             ],
