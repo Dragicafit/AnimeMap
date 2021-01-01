@@ -15,7 +15,7 @@ Chart.plugins.unregister(ChartDataLabels);
 const ratio = 5;
 const nshades = 10;
 const mapUrl =
-  "https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_0_countries.geojson";
+  "https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_50m_admin_0_countries.geojson";
 
 const ramp = colormap({
   colormap: "autumn",
@@ -45,22 +45,21 @@ var source = new VectorSource();
 socket.emit("request", (data) => {
   if (data == null) return;
 
-  let lengend = {};
-  for (let i = 0; i <= 1100; i++) {
-    lengend[i] = {
-      color: getColor(Math.round((100 * i) / 1100)),
-      data: 1,
-    };
+  const maxAnime = Math.floor((data.locations.US - 1) / 100 + 1) * 100;
+
+  let legend = [];
+  for (let i = 0; i <= maxAnime; i++) {
+    legend.push(getColor(Math.round((100 * i) / maxAnime)));
   }
   new Chart("myLegend", {
     type: "horizontalBar",
     data: {
-      labels: Object.keys(lengend),
+      labels: Object.keys(legend).reverse(),
       datasets: [
         {
           barThickness: 1,
-          data: Object.values(lengend).map((value) => value?.data),
-          backgroundColor: Object.values(lengend).map((value) => value?.color),
+          data: legend.map(() => 1),
+          backgroundColor: legend.reverse(),
         },
       ],
     },
@@ -123,7 +122,7 @@ socket.emit("request", (data) => {
 
       source.clear();
       for (let feature of features) {
-        processFeature(feature, data.locations);
+        processFeature(feature, data.locations, maxAnime);
       }
 
       new Chart("myChart", {
@@ -188,14 +187,13 @@ socket.emit("request", (data) => {
     });
 });
 
-function processFeature(feature, locations) {
+function processFeature(feature, locations, maxAnime) {
   let data = locations[feature.values_.iso_a2];
   if (data == null) return;
 
   console.log(feature.values_);
   countryColors[feature.values_.iso_a2] = {
-    color: getColor(Math.round((100 * data) / locations.Total)),
-    decalage: Math.round((100 * data) / locations.Total),
+    color: getColor(Math.round((100 * data) / maxAnime)),
     name: feature.values_.name,
   };
   source.addFeature(feature);
