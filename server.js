@@ -4,17 +4,25 @@
 require("dotenv").config();
 
 const io = require("socket.io")();
-const mysql = require("mysql");
+const { MongoClient } = require("mongodb");
 const port = process.env.PORT || 5000;
 
 process.title = "AnimeMap";
 
-let con = mysql.createPool({
-  connectionLimit: 10,
-  host: process.env.MYSLQ_HOST,
-  user: process.env.MYSLQ_USER,
-  password: process.env.MYSLQ_PASSWORD,
-  database: process.env.MYSLQ_DATABASE,
+const username = encodeURIComponent(process.env.MONGODB_USER);
+const password = encodeURIComponent(process.env.MONGODB_PASSWORD);
+const clusterUrl = process.env.MONGODB_CLUSTER_URL;
+const client = new MongoClient(
+  `mongodb://${username}:${password}@${clusterUrl}/`,
+  { useNewUrlParser: true, useUnifiedTopology: true }
+);
+
+let db;
+client.connect((error) => {
+  if (error) throw error;
+
+  db = client.db(process.env.MONGODB_DATABASE);
+  console.log("Connected successfully to server");
 });
 
 io.listen(port);
@@ -23,19 +31,21 @@ io.origins("*:*");
 io.on("connection", (socket) => {
   socket.on("request", (callback) => {
     console.log("request");
-    let sql = "SELECT Location, Nb FROM locations ORDER BY Nb DESC";
-    con.query(sql, function (err, result) {
-      if (err) return console.error(err);
-      if (result.length == 0) {
-        return callback();
-      }
-      let locations = {};
-      for (const line of result) {
-        locations[line.Location] = line.Nb;
-      }
-      callback({
-        locations: locations,
-      });
-    });
+    db.collection("nb__anime_id__location")
+      .find({})
+      .toArray()
+      .then((result) => {
+        if (result.length == 0) {
+          return callback();
+        }
+        let locations = {};
+        for (const line of result) {
+          locations[line.Location] = line.Nb;
+        }
+        callback({
+          locations: locations,
+        });
+      })
+      .catch((err) => console.error(err));
   });
 });
