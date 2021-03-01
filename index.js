@@ -117,7 +117,7 @@ socket.emit("request", (data) => {
     .then(function (json) {
       var format = new GeoJSON();
       var features = format.readFeatures(json, {
-        featureProjection: "EPSG:3857",
+        featureProjection: "EPSG:4326",
       });
 
       source.clear();
@@ -235,6 +235,7 @@ let map = new Map({
   view: new View({
     center: [0, 4000000],
     zoom: 1,
+    projection: "EPSG:4326",
   }),
   pixelRatio: ratio,
 });
