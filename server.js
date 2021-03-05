@@ -33,6 +33,7 @@ io.on("connection", (socket) => {
     console.log("request");
     db.collection("nb__anime_id__location")
       .find({})
+      .sort({ Nb: -1 })
       .toArray()
       .then((result) => {
         if (result.length == 0) {
