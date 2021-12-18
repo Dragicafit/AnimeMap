@@ -14,11 +14,12 @@
   "dependencies": {
     "chart.js": "^2.9.4",
     "chartjs-plugin-datalabels": "^0.7.0",
-    "colormap": "^2.3.1",
-    "dotenv": "^8.2.0",
+    "colormap": "^2.3.2",
+    "dotenv": "^10.0.0",
     "jsts": "^2.6.1",
-    "mongodb": "^3.6.3",
-    "ol": "^6.4.3",
+    "mongodb": "^4.2.2",
+    "ol": "^6.9.0",
+    "proj4": "^2.7.5",
     "socket.io": "^2.3.0",
     "socket.io-client": "^2.3.1"
   },
