@@ -43,6 +43,8 @@ io.on("connection", (socket) => {
         for (const line of result) {
           locations[line.Location] = line.Nb;
         }
+        if (locations.IR == null) locations.IR = "banned";
+        if (locations.CN == null) locations.CN = "banned";
         callback({
           locations: locations,
         });

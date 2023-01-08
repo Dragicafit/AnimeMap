@@ -259,7 +259,9 @@ socket.emit("request", (data) => {
               label: "Not present on the map",
               barThickness: 6.5,
               minBarLength: 2,
-              data: Object.values(data.locations),
+              data: Object.values(data.locations).map((number) =>
+                number === "banned" ? 0 : number
+              ),
               fill: false,
               backgroundColor: Object.keys(data.locations).map(
                 (key) => countryColors[key]?.color
@@ -307,6 +309,9 @@ socket.emit("request", (data) => {
                     value +
                     ","
                 );
+                if (value === 0) {
+                  return "banned";
+                }
                 return `${value} ${processDiff(
                   value - previous[context.chart.data.labels[context.dataIndex]]
                 )}`;
@@ -341,7 +346,10 @@ function processFeature(feature, locations, maxAnime) {
   if (data == null) return;
 
   countryColors[feature.values_.iso_a2] = {
-    color: getColor(Math.round((100 * data) / maxAnime)),
+    color:
+      data === "banned"
+        ? "rgba(255,255,255)"
+        : getColor(Math.round((100 * data) / maxAnime)),
     name: feature.values_.name,
   };
   source.addFeature(feature);
